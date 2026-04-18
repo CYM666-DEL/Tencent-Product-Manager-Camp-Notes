@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>物品定位助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #2196F3;
+            --primary-dark: #1976D2;
+            --primary-light: #BBDEFB;
+            --background: #F5F5F5;
+            --card: #FFFFFF;
+            --text: #212121;
+            --text-secondary: #757575;
+            --danger: #F44336;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            padding-bottom: 100px;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: calc(100px + env(safe-area-inset-bottom));
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            padding-top: calc(20px + env(safe-area-inset-top));
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            background: rgba(255,255,255,0.9);
+        }
+
+        .container {
+            padding: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .item-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item-thumbnail {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+            background: var(--primary-light);
+        }
+
+        .item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .item-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .item-location {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .item-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .delete-btn {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--danger);
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            bottom: calc(30px + env(safe-area-inset-bottom));
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 36px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(33,150,243,0.4);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .modal-content {
+            background: var(--card);
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 25px;
+            padding-bottom: calc(25px + env(safe-area-inset-bottom));
+            border-radius: 20px 20px 0 0;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            font-size: 22px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 44px;
+            height: 44px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+
+        .photo-area {
+            border: 2px dashed var(--primary-light);
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .photo-area:hover, .photo-area:active {
+            background: var(--primary-light);
+        }
+
+        .photo-area.has-photo {
+            padding: 0;
+            border: none;
+        }
+
+        .photo-preview {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .photo-preview.show {
+            display: block;
+        }
+
+        .photo-placeholder {
+            color: var(--primary);
+        }
+
+        .photo-placeholder svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+        }
+
+        .photo-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .photo-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .photo-btn {
+            flex: 1;
+            padding: 14px;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            background: white;
+            color: var(--primary);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .photo-btn:active {
+            background: var(--primary-light);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:active {
+            background: var(--primary-dark);
+        }
+
+        .btn-primary:disabled {
+            background: var(--primary-light);
+            cursor: not-allowed;
+        }
+
+        .highlight {
+            background: yellow;
+            padding: 0 2px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📦 物品定位助手</h1>
+        <input type="text" class="search-box" id="searchInput" placeholder="搜索物品...">
+    </div>
+
+    <div class="container" id="itemsList"></div>
+
+    <button class="fab" id="addBtn">+</button>
+
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>录入物品</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label>物品照片</label>
+                <div class="photo-area" id="photoArea">
+                    <div class="photo-placeholder">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                        </svg>
+                        <p>请选择拍照或相册</p>
+                    </div>
+                    <img class="photo-preview" id="photoPreview">
+                </div>
+                <div class="photo-buttons" id="photoButtons">
+                    <button class="photo-btn" id="takePhotoBtn">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/>
+                            <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
+                        </svg>
+                        拍照
+                    </button>
+                    <button class="photo-btn" id="chooseAlbumBtn">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                        </svg>
+                        相册
+                    </button>
+                </div>
+                <input type="file" class="photo-input" id="photoInputCamera" accept="image/*" capture="environment" style="display: none;">
+                <input type="file" class="photo-input" id="photoInputAlbum" accept="image/*" style="display: none;">
+            </div>
+
+            <div class="form-group">
+                <label>物品名称</label>
+                <input type="text" class="form-input" id="itemName" placeholder="例如：雨伞">
+            </div>
+
+            <div class="form-group">
+                <label>位置描述</label>
+                <input type="text" class="form-input" id="itemLocation" placeholder="例如：客厅茶几上">
+            </div>
+
+            <button class="btn btn-primary" id="saveBtn" disabled>保存物品</button>
+        </div>
+    </div>
+
+    <script>
+        let items = [];
+        let currentPhoto = null;
+
+        const searchInput = document.getElementById('searchInput');
+        const itemsList = document.getElementById('itemsList');
+        const addBtn = document.getElementById('addBtn');
+        const addModal = document.getElementById('addModal');
+        const closeModal = document.getElementById('closeModal');
+        const photoInputCamera = document.getElementById('photoInputCamera');
+        const photoInputAlbum = document.getElementById('photoInputAlbum');
+        const photoArea = document.getElementById('photoArea');
+        const photoPreview = document.getElementById('photoPreview');
+        const photoButtons = document.getElementById('photoButtons');
+        const takePhotoBtn = document.getElementById('takePhotoBtn');
+        const chooseAlbumBtn = document.getElementById('chooseAlbumBtn');
+        const itemName = document.getElementById('itemName');
+        const itemLocation = document.getElementById('itemLocation');
+        const saveBtn = document.getElementById('saveBtn');
+
+        function loadItems() {
+            const stored = localStorage.getItem('itemLocator');
+            items = stored ? JSON.parse(stored) : [];
+            renderItems();
+        }
+
+        function saveItems() {
+            localStorage.setItem('itemLocator', JSON.stringify(items));
+        }
+
+        function compressImage(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxSize = 1200;
+                    
+                    if (width > maxSize || height > maxSize) {
+                        if (width > height) {
+                            height = (height / width) * maxSize;
+                            width = maxSize;
+                        } else {
+                            width = (width / height) * maxSize;
+                            height = maxSize;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    let quality = 0.8;
+                    let result = canvas.toDataURL('image/jpeg', quality);
+                    
+                    while (result.length > 200 * 1024 && quality > 0.1) {
+                        quality -= 0.1;
+                        result = canvas.toDataURL('image/jpeg', quality);
+                    }
+                    
+                    callback(result);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function highlightText(text, query) {
+            if (!query) return text;
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        function renderItems(filter = '') {
+            const filteredItems = filter 
+                ? items.filter(item => 
+                    item.name.toLowerCase().includes(filter.toLowerCase()) ||
+                    item.location.toLowerCase().includes(filter.toLowerCase())
+                  )
+                : items;
+
+            filteredItems.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+            if (filteredItems.length === 0) {
+                itemsList.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M20 6h-3.17l-1.24-1.35c-.37-.41-.91-.65-1.47-.65H9.88c-.56 0-1.1.24-1.47.65L7.17 6H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 14H4V8h4.05l1.23-1.35c.1-.11.25-.18.4-.18h4.64c.15 0 .3.07.4.18L15.95 8H20v12zM9 11c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3zm11 4H12v-2h8v2zm0-4h-5V9h5v2z"/>
+                        </svg>
+                        <p>${filter ? '没有找到匹配的物品' : '还没有添加任何物品'}</p>
+                        <p style="margin-top: 10px; font-size: 14px;">点击右下角按钮添加</p>
+                    </div>
+                `;
+                return;
+            }
+
+            itemsList.innerHTML = filteredItems.map(item => `
+                <div class="item-card">
+                    <img src="${item.photo}" class="item-thumbnail" alt="${item.name}">
+                    <div class="item-info">
+                        <div class="item-name">${highlightText(item.name, filter)}</div>
+                        <div class="item-location">
+                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" style="opacity: 0.6;">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                            </svg>
+                            ${highlightText(item.location, filter)}
+                        </div>
+                        <div class="item-time">${new Date(item.time).toLocaleString('zh-CN')}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteItem('${item.id}')">×</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteItem(id) {
+            if (confirm('确定要删除这个物品吗？')) {
+                items = items.filter(item => item.id !== id);
+                saveItems();
+                renderItems(searchInput.value);
+            }
+        }
+
+        function validateForm() {
+            saveBtn.disabled = !(currentPhoto && itemName.value.trim() && itemLocation.value.trim());
+        }
+
+        addBtn.addEventListener('click', () => {
+            addModal.classList.add('active');
+        });
+
+        closeModal.addEventListener('click', () => {
+            addModal.classList.remove('active');
+            currentPhoto = null;
+            photoPreview.classList.remove('show');
+            photoArea.classList.remove('has-photo');
+            photoButtons.style.display = 'flex';
+            itemName.value = '';
+            itemLocation.value = '';
+            validateForm();
+        });
+
+        addModal.addEventListener('click', (e) => {
+            if (e.target === addModal) {
+                closeModal.click();
+            }
+        });
+
+        takePhotoBtn.addEventListener('click', () => {
+            photoInputCamera.click();
+        });
+
+        chooseAlbumBtn.addEventListener('click', () => {
+            photoInputAlbum.click();
+        });
+
+        function handlePhotoSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                compressImage(file, (base64) => {
+                    currentPhoto = base64;
+                    photoPreview.src = base64;
+                    photoPreview.classList.add('show');
+                    photoArea.classList.add('has-photo');
+                    photoButtons.style.display = 'none';
+                    validateForm();
+                });
+            }
+            e.target.value = '';
+        }
+
+        photoInputCamera.addEventListener('change', handlePhotoSelect);
+        photoInputAlbum.addEventListener('change', handlePhotoSelect);
+
+        itemName.addEventListener('input', validateForm);
+        itemLocation.addEventListener('input', validateForm);
+
+        saveBtn.addEventListener('click', () => {
+            const newItem = {
+                id: Date.now().toString(),
+                photo: currentPhoto,
+                name: itemName.value.trim(),
+                location: itemLocation.value.trim(),
+                time: new Date().toISOString()
+            };
+            
+            items.push(newItem);
+            saveItems();
+            renderItems(searchInput.value);
+            closeModal.click();
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            renderItems(e.target.value);
+        });
+
+        window.deleteItem = deleteItem;
+        loadItems();
+    </script>
+</body>
+</html>
